@@ -1,0 +1,18 @@
+module model {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:model";
+  prefix model;
+
+  revision 2019-05-23;
+
+  container config {
+    leaf data {
+      type string;
+    }
+    container contained {
+      leaf data {
+        type string;
+      }
+    }
+  }
+}

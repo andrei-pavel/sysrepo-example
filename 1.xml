@@ -1,0 +1,6 @@
+<config xmlns="urn:ietf:params:xml:ns:yang:model">
+  <data>1</data>
+  <contained>
+    <data>1</data>
+  </contained>
+</config>
