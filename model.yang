@@ -3,15 +3,20 @@ module model {
   namespace "urn:ietf:params:xml:ns:yang:model";
   prefix model;
 
-  revision 2019-05-23;
+  revision 2019-12-19;
 
   container config {
-    leaf data {
-      type string;
-    }
-    container contained {
-      leaf data {
+    list le_list {
+      key "name";
+      leaf name {
         type string;
+        mandatory true;
+      }
+
+      container contained {
+        leaf data {
+            type string;
+        }
       }
     }
   }

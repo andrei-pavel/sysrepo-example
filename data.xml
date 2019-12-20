@@ -1,0 +1,8 @@
+<config xmlns="urn:ietf:params:xml:ns:yang:model">
+  <le_list>
+    <name>w</name>
+    <contained>
+      <data>1</data>
+    </contained>
+  </le_list>
+</config>

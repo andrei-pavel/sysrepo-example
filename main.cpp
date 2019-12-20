@@ -60,6 +60,14 @@ struct SysrepoCallback : Callback {
       CHANGES.push_back(change);
     }
 
+    std::thread([]() {
+        S_Connection connection(std::make_shared<Connection>());
+        S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
+        session->delete_item("/model:config");
+        session->set_item("/model:config/le_list[name='w']/contained/data", std::make_shared<Val>(1337));
+        session->apply_changes();
+    }).detach();
+
     return 0;
   }
 };
