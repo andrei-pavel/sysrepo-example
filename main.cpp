@@ -48,8 +48,8 @@ struct SysrepoCallback : Callback {
       S_Change change;
       try {
         change = session->get_change_next(iterator);
-      } catch (sysrepo_exception const &ex) {
-        std::cerr << "get change iterator next failed: " << ex.what()
+      } catch (sysrepo_exception const &exception) {
+        std::cerr << "get change iterator next failed: " << exception.what()
                   << std::endl;
         break;
       }
@@ -61,11 +61,12 @@ struct SysrepoCallback : Callback {
     }
 
     std::thread([]() {
-        S_Connection connection(std::make_shared<Connection>());
-        S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
-        session->delete_item("/model:config");
-        session->set_item("/model:config/le_list[name='w']/contained/data", std::make_shared<Val>(1337));
-        session->apply_changes();
+      S_Connection connection(std::make_shared<Connection>());
+      S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
+      session->delete_item("/model:config");
+      session->set_item("/model:config/le_list[name='whatever']/contained/data",
+                        std::make_shared<Val>(1337));
+      session->apply_changes();
     }).detach();
 
     return 0;
@@ -86,7 +87,7 @@ struct SysrepoClient {
                                            std::make_shared<SysrepoCallback>(),
                                            0, 0, SR_SUBSCR_DEFAULT);
 
-    // Every 2s, display changes.
+    // Every 1s, display changes.
     while (true) {
       {
         std::lock_guard<std::mutex> _(MUTEX);
