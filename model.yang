@@ -3,7 +3,7 @@ module model {
   namespace "urn:ietf:params:xml:ns:yang:model";
   prefix model;
 
-  revision 2019-12-19;
+  revision 2020-01-06;
 
   container config {
     list le_list {
@@ -16,6 +16,12 @@ module model {
       container contained {
         leaf data {
             type string;
+        }
+        leaf floating {
+          type decimal64 {
+            fraction-digits 18;
+            range "0 .. 1";
+          }
         }
       }
     }

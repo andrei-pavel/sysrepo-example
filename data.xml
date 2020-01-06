@@ -1,8 +1,9 @@
 <config xmlns="urn:ietf:params:xml:ns:yang:model">
   <le_list>
-    <name>w</name>
+    <name>a</name>
     <contained>
       <data>1</data>
+      <floating>0.1</floating>
     </contained>
   </le_list>
 </config>

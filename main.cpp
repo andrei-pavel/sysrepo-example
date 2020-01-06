@@ -63,9 +63,10 @@ struct SysrepoCallback : Callback {
     std::thread([]() {
       S_Connection connection(std::make_shared<Connection>());
       S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
-      session->delete_item("/model:config");
       session->set_item("/model:config/le_list[name='whatever']/contained/data",
                         std::make_shared<Val>(1337));
+      session->set_item("/model:config/le_list[name='whatever']/contained/floating",
+                        std::make_shared<Val>(13.37));
       session->apply_changes();
     }).detach();
 
@@ -93,8 +94,8 @@ struct SysrepoClient {
         std::lock_guard<std::mutex> _(MUTEX);
         for (S_Change const &change : CHANGES) {
           std::cout << "operation: " << change->oper() << std::endl;
-          auto const &o(change->old_val());
-          auto const &n(change->new_val());
+          S_Val const &o(change->old_val());
+          S_Val const &n(change->new_val());
           if (o) {
             std::cout << "old: " << o->to_string() << std::endl;
           }
