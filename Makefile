@@ -16,7 +16,7 @@ build:
 run:
 	sysrepoctl -R || true
 	sysrepoctl -u model || true
-	sysrepoctl -i ./model.yang -o root:root -p 666
+	sysrepoctl -i ./model.yang
 	./a.out
 
 .PHONY: all build run
