@@ -6,4 +6,5 @@
       <floating>0.1</floating>
     </contained>
   </le_list>
+  <child>1</child>
 </config>

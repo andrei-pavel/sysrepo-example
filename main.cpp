@@ -60,13 +60,17 @@ struct SysrepoCallback : Callback {
       CHANGES.push_back(change);
     }
 
+    // Get an item.
+    S_Val value(session->get_item("/model:config/child"));
+
     std::thread([]() {
       S_Connection connection(std::make_shared<Connection>());
       S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
+      session->delete_item("/model:config");
       session->set_item("/model:config/le_list[name='whatever']/contained/data",
                         std::make_shared<Val>(1337));
-      session->set_item("/model:config/le_list[name='whatever']/contained/floating",
-                        std::make_shared<Val>(13.37));
+      session->set_item_str(
+          "/model:config/le_list[name='whatever']/contained/floating", "13.37");
       session->apply_changes();
     }).detach();
 
@@ -75,19 +79,16 @@ struct SysrepoCallback : Callback {
 };
 
 struct SysrepoClient {
-  std::string model_ = "model";
-  S_Connection connection_;
-  S_Session session_;
-  S_Subscribe subscription_;
-
-  void displayChanges() {
+  SysrepoClient() {
     connection_ = std::make_shared<Connection>();
     session_ = std::make_shared<Session>(connection_, SR_DS_RUNNING);
     subscription_ = std::make_shared<Subscribe>(session_);
     subscription_->module_change_subscribe(model_.c_str(),
                                            std::make_shared<SysrepoCallback>(),
                                            0, 0, SR_SUBSCR_DEFAULT);
+  }
 
+  void displayChanges() {
     // Every 1s, display changes.
     while (true) {
       {
@@ -109,6 +110,11 @@ struct SysrepoClient {
       std::this_thread::sleep_for(1s);
     }
   }
+
+  std::string const model_ = "model";
+  S_Connection connection_;
+  S_Session session_;
+  S_Subscribe subscription_;
 };
 
 int main() {
