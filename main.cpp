@@ -70,7 +70,7 @@ struct SysrepoCallback : Callback {
       session->set_item("/model:config/le_list[name='whatever']/contained/data",
                         std::make_shared<Val>(1337));
       session->set_item_str(
-          "/model:config/le_list[name='whatever']/contained/floating", "13.37");
+          "/model:config/le_list[name='whatever']/contained/floating", "0.37");
       session->apply_changes();
     }).detach();
 
