@@ -18,19 +18,19 @@ struct SysrepoCallback : Callback {
     std::ostringstream event_type;
     switch (event) {
     case SR_EV_UPDATE:
-      event_type << "update";
+      event_type << "SR_EV_UPDATE";
       break;
     case SR_EV_CHANGE:
-      event_type << "change";
+      event_type << "SR_EV_CHANGE";
       break;
     case SR_EV_DONE:
-      event_type << "done";
+      event_type << "SR_EV_DONE";
       break;
     case SR_EV_ABORT:
-      event_type << "abort";
+      event_type << "SR_EV_ABORT";
       break;
     case SR_EV_ENABLED:
-      event_type << "enabled";
+      event_type << "SR_EV_ENABLED";
       break;
     default:
       event_type << "unknown (" << event << ")";
@@ -85,7 +85,7 @@ struct SysrepoClient {
     subscription_ = std::make_shared<Subscribe>(session_);
     subscription_->module_change_subscribe(model_.c_str(),
                                            std::make_shared<SysrepoCallback>(),
-                                           0, 0, SR_SUBSCR_UPDATE);
+                                           nullptr, nullptr, 0, SR_SUBSCR_UPDATE);
   }
 
   void displayChanges() {
