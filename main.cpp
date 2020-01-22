@@ -4,6 +4,9 @@
 #include <sysrepo-cpp/Session.hpp>
 #include <thread>
 
+#define ON_CHANGE true
+#define ON_UPDATE true
+
 using namespace sysrepo;
 using namespace std::chrono_literals;
 
@@ -63,18 +66,35 @@ struct SysrepoCallback : Callback {
       CHANGES.push_back(change);
     }
 
-    if (event == SR_EV_UPDATE) {
-        S_Val value(session->get_item("/model:config/child"));
-        session->delete_item("/model:config");
-        session->set_item("/model:config/le_list[name='whatever']/contained/data",
-            std::make_shared<Val>(1337));
-        session->set_item_str(
-            "/model:config/le_list[name='whatever']/contained/floating", "0.37");
-        session->set_item("/model:config/child",
-            std::make_shared<Val>(1337));
+#ifdef ON_CHANGE
+    if (event == SR_EV_CHANGE) {
+        std::thread([&]() {
+            S_Connection connection(std::make_shared<Connection>());
+            S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
+            f(session);
+            session->apply_changes();
+        }).detach();
     }
+#endif
+
+#ifdef ON_UPDATE
+    if (event == SR_EV_UPDATE) {
+        f(session);
+    }
+#endif
 
     return 0;
+  }
+
+  void f(S_Session const& session) {
+      S_Val value(session->get_item("/model:config/child"));
+      session->delete_item("/model:config");
+      session->set_item("/model:config/le_list[name='whatever']/contained/data",
+          std::make_shared<Val>(1337));
+      session->set_item_str(
+          "/model:config/le_list[name='whatever']/contained/floating", "0.37");
+      session->set_item("/model:config/child",
+          std::make_shared<Val>(1337));
   }
 };
 
