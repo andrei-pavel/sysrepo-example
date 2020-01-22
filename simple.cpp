@@ -1,9 +1,7 @@
 #include <sstream>
 #include <sysrepo-cpp/Session.hpp>
-#include <thread>
 
 using namespace sysrepo;
-using namespace std::chrono_literals;
 
 struct SysrepoCallback : Callback {
   int module_change(S_Session session, char const * /* module_name */,
@@ -69,9 +67,7 @@ struct SysrepoClient {
 
 int main() {
   SysrepoClient client;
-  while (true) {
-    std::this_thread::sleep_for(1s);
-  }
+  select(0, nullptr, nullptr, nullptr, nullptr);
 
   return 0;
 }
