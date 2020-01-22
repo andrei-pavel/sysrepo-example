@@ -1,17 +1,9 @@
-#include <mutex>
 #include <sstream>
-#include <string>
 #include <sysrepo-cpp/Session.hpp>
 #include <thread>
 
-#define ON_CHANGE true
-#define ON_UPDATE true
-
 using namespace sysrepo;
 using namespace std::chrono_literals;
-
-std::vector<S_Change> CHANGES;
-std::mutex MUTEX;
 
 struct SysrepoCallback : Callback {
   int module_change(S_Session session, char const * /* module_name */,
@@ -41,47 +33,9 @@ struct SysrepoCallback : Callback {
     }
     std::cout << event_type.str() << std::endl;
 
-    // Iterate through changes.
-    S_Iter_Change iterator(session->get_changes_iter("/model:*//."));
-    if (!iterator) {
-      std::cerr << "no iterator" << std::endl;
-      return 1;
-    }
-
-    // Push changes to global vector.
-    std::lock_guard<std::mutex> _(MUTEX);
-    while (true) {
-      S_Change change;
-      try {
-        change = session->get_change_next(iterator);
-      } catch (sysrepo_exception const &exception) {
-        std::cerr << "get change iterator next failed: " << exception.what()
-                  << std::endl;
-        break;
-      }
-      if (!change) {
-        // End of changes, not an error.
-        break;
-      }
-      CHANGES.push_back(change);
-    }
-
-#ifdef ON_CHANGE
-    if (event == SR_EV_CHANGE) {
-      std::thread([&]() {
-        S_Connection connection(std::make_shared<Connection>());
-        S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
-        f(session);
-        session->apply_changes();
-      }).detach();
-    }
-#endif
-
-#ifdef ON_UPDATE
     if (event == SR_EV_UPDATE) {
       f(session);
     }
-#endif
 
     return SR_ERR_OK;
   }
@@ -107,29 +61,6 @@ struct SysrepoClient {
         0, SR_SUBSCR_UPDATE);
   }
 
-  void displayChanges() {
-    // Every 1s, display changes.
-    while (true) {
-      {
-        std::lock_guard<std::mutex> _(MUTEX);
-        for (S_Change const &change : CHANGES) {
-          std::cout << "operation: " << change->oper() << std::endl;
-          S_Val const &o(change->old_val());
-          S_Val const &n(change->new_val());
-          if (o) {
-            std::cout << "old: " << o->to_string() << std::endl;
-          }
-          if (n) {
-            std::cout << "new: " << n->to_string() << std::endl;
-          }
-          std::cout << std::endl;
-        }
-        CHANGES.clear();
-      }
-      std::this_thread::sleep_for(1s);
-    }
-  }
-
   std::string const model_ = "model";
   S_Connection connection_;
   S_Session session_;
@@ -138,7 +69,9 @@ struct SysrepoClient {
 
 int main() {
   SysrepoClient client;
-  client.displayChanges();
+  while (true) {
+    std::this_thread::sleep_for(1s);
+  }
 
   return 0;
 }
