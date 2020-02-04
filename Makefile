@@ -14,7 +14,6 @@ build:
 	main.cpp
 
 run:
-	sysrepoctl -R || true
 	sysrepoctl -u model || true
 	sysrepoctl -i ./model.yang
 	./a.out

@@ -24,6 +24,21 @@ module model {
           }
         }
       }
+      list le_nested_list {
+        key "a b c d";
+        leaf a {
+          type int32;
+        }
+        leaf b {
+          type int32;
+        }
+        leaf c {
+          type int32;
+        }
+        leaf d {
+          type int32;
+        }
+      }
     }
     leaf child {
         type int32;

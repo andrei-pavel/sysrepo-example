@@ -94,6 +94,8 @@ struct SysrepoCallback : Callback {
     session->set_item_str(
         "/model:config/le_list[name='whatever']/contained/floating", "0.37");
     session->set_item("/model:config/child", std::make_shared<Val>(1337));
+    S_Val v(std::make_shared<Val>(nullptr, SR_CONTAINER_T));
+    session->set_item("/model:config/le_list[name='a']/le_nested_list[a='1'][b='2'][c='3'][d='4']", v);
   }
 };
 
