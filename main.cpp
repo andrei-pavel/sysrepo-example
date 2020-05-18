@@ -95,13 +95,16 @@ struct SysrepoCallback : Callback {
         "/model:config/le_list[name='whatever']/contained/floating", "0.37");
     session->set_item("/model:config/child", std::make_shared<Val>(1337));
     S_Val v(std::make_shared<Val>(nullptr, SR_CONTAINER_T));
-    session->set_item("/model:config/le_list[name='a']/le_nested_list[a='1'][b='2'][c='3'][d='4']", v);
+    session->set_item("/model:config/le_list[name='a']/"
+                      "le_nested_list[a='1'][b='2'][c='3'][d='4']",
+                      v);
   }
 };
 
 struct SysrepoClient {
   SysrepoClient() {
     connection_ = std::make_shared<Connection>();
+    model_ = "model";
     session_ = std::make_shared<Session>(connection_, SR_DS_RUNNING);
     subscription_ = std::make_shared<Subscribe>(session_);
     subscription_->module_change_subscribe(
@@ -110,37 +113,50 @@ struct SysrepoClient {
   }
 
   void displayChanges() {
-    // Every 1s, display changes.
+    for (S_Change const &change : CHANGES) {
+      std::cout << "operation: " << change->oper() << std::endl;
+      S_Val const &o(change->old_val());
+      S_Val const &n(change->new_val());
+      if (o) {
+        std::cout << "old: " << o->to_string() << std::endl;
+      }
+      if (n) {
+        std::cout << "new: " << n->to_string() << std::endl;
+      }
+      std::cout << std::endl;
+    }
+    CHANGES.clear();
+  }
+
+  void displayXpaths() {
+    libyang::S_Data_Node node(session_->get_data("/model:config"));
+
+    // For each node...
+    for (libyang::S_Data_Node const& n : node->tree_dfs()) {
+      std::cout << n->path() << std::endl;
+    }
+  }
+
+  void loop() {
+    // Every 1s...
     while (true) {
       {
         std::lock_guard<std::mutex> _(MUTEX);
-        for (S_Change const &change : CHANGES) {
-          std::cout << "operation: " << change->oper() << std::endl;
-          S_Val const &o(change->old_val());
-          S_Val const &n(change->new_val());
-          if (o) {
-            std::cout << "old: " << o->to_string() << std::endl;
-          }
-          if (n) {
-            std::cout << "new: " << n->to_string() << std::endl;
-          }
-          std::cout << std::endl;
-        }
-        CHANGES.clear();
+        displayXpaths();
       }
       std::this_thread::sleep_for(1s);
     }
   }
 
-  std::string const model_ = "model";
   S_Connection connection_;
+  std::string model_;
   S_Session session_;
   S_Subscribe subscription_;
 };
 
 int main() {
   SysrepoClient client;
-  client.displayChanges();
+  client.loop();
 
   return 0;
 }
