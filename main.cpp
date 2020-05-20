@@ -4,14 +4,20 @@
 #include <sysrepo-cpp/Session.hpp>
 #include <thread>
 
-#define ON_CHANGE true
-#define ON_UPDATE true
+// #define DISPLAY_CHANGES
+#define DISPLAY_XPATHS
 
+using namespace libyang;
 using namespace sysrepo;
 using namespace std::chrono_literals;
 
 std::vector<S_Change> CHANGES;
 std::mutex MUTEX;
+
+std::string const MODEL = "model";
+std::string const MODEL_ALL = "/" + MODEL + ":*//.";
+std::string const ROOT_NODE = "config";
+std::string const MODEL_AND_ROOT_NODE = "/" + MODEL + ":" + ROOT_NODE;
 
 struct SysrepoCallback : Callback {
   int module_change(S_Session session, char const * /* module_name */,
@@ -42,7 +48,7 @@ struct SysrepoCallback : Callback {
     std::cout << event_type.str() << std::endl;
 
     // Iterate through changes.
-    S_Iter_Change iterator(session->get_changes_iter("/model:*//."));
+    S_Iter_Change iterator(session->get_changes_iter(MODEL_ALL.c_str()));
     if (!iterator) {
       std::cerr << "no iterator" << std::endl;
       return 1;
@@ -66,50 +72,18 @@ struct SysrepoCallback : Callback {
       CHANGES.push_back(change);
     }
 
-#ifdef ON_CHANGE
-    if (event == SR_EV_CHANGE) {
-      std::thread([&]() {
-        S_Connection connection(std::make_shared<Connection>());
-        S_Session session(std::make_shared<Session>(connection, SR_DS_RUNNING));
-        f(session);
-        session->apply_changes();
-      }).detach();
-    }
-#endif
-
-#ifdef ON_UPDATE
-    if (event == SR_EV_UPDATE) {
-      f(session);
-    }
-#endif
-
     return SR_ERR_OK;
-  }
-
-  void f(S_Session const &session) {
-    S_Val value(session->get_item("/model:config/child"));
-    session->delete_item("/model:config");
-    session->set_item("/model:config/le_list[name='whatever']/contained/data",
-                      std::make_shared<Val>(1337));
-    session->set_item_str(
-        "/model:config/le_list[name='whatever']/contained/floating", "0.37");
-    session->set_item("/model:config/child", std::make_shared<Val>(1337));
-    S_Val v(std::make_shared<Val>(nullptr, SR_CONTAINER_T));
-    session->set_item("/model:config/le_list[name='a']/"
-                      "le_nested_list[a='1'][b='2'][c='3'][d='4']",
-                      v);
   }
 };
 
 struct SysrepoClient {
   SysrepoClient() {
     connection_ = std::make_shared<Connection>();
-    model_ = "model";
     session_ = std::make_shared<Session>(connection_, SR_DS_RUNNING);
     subscription_ = std::make_shared<Subscribe>(session_);
     subscription_->module_change_subscribe(
-        model_.c_str(), std::make_shared<SysrepoCallback>(), nullptr, nullptr,
-        0, SR_SUBSCR_UPDATE);
+        MODEL.c_str(), std::make_shared<SysrepoCallback>(), nullptr, nullptr, 0,
+        SR_SUBSCR_UPDATE);
   }
 
   void displayChanges() {
@@ -129,12 +103,21 @@ struct SysrepoClient {
   }
 
   void displayXpaths() {
-    libyang::S_Data_Node node(session_->get_data("/model:config"));
+    libyang::S_Data_Node node(session_->get_data(MODEL_AND_ROOT_NODE.c_str()));
 
     // For each node...
-    for (libyang::S_Data_Node const& n : node->tree_dfs()) {
-      std::cout << n->path() << std::endl;
+    for (libyang::S_Data_Node const &n : node->tree_dfs()) {
+      std::string path(n->path());
+      std::string const is_key(isKey(path) ? "is key" : "is not key");
+      std::vector<std::string> kk(keys(path));
+      std::cout << n->path() << " " << is_key;
+      for (std::string const &k : kk) {
+        std::cout << " - " << k << std::endl;
+      }
+      std::cout << std::endl;
     }
+
+    std::cout << std::endl << std::endl;
   }
 
   void loop() {
@@ -142,14 +125,71 @@ struct SysrepoClient {
     while (true) {
       {
         std::lock_guard<std::mutex> _(MUTEX);
+#ifdef DISPLAY_CHANGES
+        displayChanges();
+#endif
+#ifdef DISPLAY_XPATHS
         displayXpaths();
+#endif
       }
       std::this_thread::sleep_for(1s);
     }
   }
 
+private:
+  bool isKey(std::string const &xpath) {
+    char const *const &xpath_c_str(xpath.c_str());
+
+    // S_Data_Node const data_node(connection_->get_module_info());
+    // S_Data_Node const data_node(session_->get_data(MODEL_ALL.c_str()));
+    // S_Data_Node const data_node(session_->get_data(MODEL_AND_ROOT_NODE.c_str()));
+    S_Data_Node const data_node(session_->get_data(xpath_c_str));
+
+    S_Set const set(data_node->find_path(xpath_c_str));
+    std::cerr << "  isKey(" << xpath << "): " << set->number() << std::endl;
+    for (S_Schema_Node const &schema_node : set->schema()) {
+      if (schema_node->nodetype() != LYS_LEAF) {
+        std::cerr << "  isKey(" << xpath << "): " << schema_node->nodetype()
+                  << " != LYS_LEAF" << std::endl;
+        continue;
+      }
+      Schema_Node_Leaf schema_node_leaf(schema_node);
+      return schema_node_leaf.is_key() != nullptr;
+    }
+    return false;
+  }
+
+  std::vector<std::string> keys(std::string const &xpath) {
+    char const *const &xpath_c_str(xpath.c_str());
+
+    // S_Data_Node const data_node(connection_->get_module_info());
+    // S_Data_Node const data_node(session_->get_data(MODEL_ALL.c_str()));
+    // S_Data_Node const data_node(session_->get_data(MODEL_AND_ROOT_NODE.c_str()));
+    S_Data_Node const data_node(session_->get_data(xpath_c_str));
+
+    S_Set const set(data_node->find_path(xpath_c_str));
+    std::cerr << "    keys(" << xpath << "): " << set->number() << std::endl;
+    std::vector<std::string> result;
+    for (S_Schema_Node const &schema_node : set->schema()) {
+      if (schema_node->nodetype() != LYS_LIST) {
+        std::cerr << "    keys(" << xpath << "): " << schema_node->nodetype()
+                  << " != LYS_LIST" << std::endl;
+        continue;
+      }
+      Schema_Node_List schema_node_list(schema_node);
+      for (S_Schema_Node_Leaf const &key_node : schema_node_list.keys()) {
+        if (schema_node->nodetype() != LYS_LEAF) {
+          std::cerr << "    keys(" << xpath << "): " << schema_node->nodetype()
+                    << " != LYS_LEAF" << std::endl;
+          continue;
+        }
+        result.push_back(key_node->name());
+      }
+    }
+    return result;
+  }
+
   S_Connection connection_;
-  std::string model_;
   S_Session session_;
   S_Subscribe subscription_;
 };

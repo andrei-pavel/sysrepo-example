@@ -5,6 +5,14 @@
       <data>1</data>
       <floating>0.1</floating>
     </contained>
+    <le_nested_list>
+        <a>1</a>
+        <b>2</b>
+        <c>3</c>
+        <d>4</d>
+    </le_nested_list>
+    <le_leaf_list>hello</le_leaf_list>
+    <le_leaf_list>world</le_leaf_list>
   </le_list>
   <child>1</child>
 </config>

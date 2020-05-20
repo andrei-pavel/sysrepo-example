@@ -39,6 +39,9 @@ module model {
           type int32;
         }
       }
+      leaf-list le_leaf_list {
+        type string;
+      }
     }
     leaf child {
         type int32;

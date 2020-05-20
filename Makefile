@@ -11,7 +11,7 @@ build:
 	-lyang -lyang-cpp -lsysrepo -lsysrepo-cpp               \
 	-lev -lpcre -lpthread -lprotobuf-c                      \
 	-g3 -ggdb -O0                                           \
-	main.cpp
+	./main.cpp
 
 run:
 	sysrepoctl -u model || true
