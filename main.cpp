@@ -137,15 +137,24 @@ struct SysrepoClient {
   }
 
 private:
-  bool isKey(std::string const &xpath) {
+  S_Set getSet(std::string const& xpath) {
     char const *const &xpath_c_str(xpath.c_str());
+
+    S_Context context(session_->get_context());
+    S_Module module(context->get_module(MODEL.c_str()));
+    S_Schema_Node data_node(module->data());
 
     // S_Data_Node const data_node(connection_->get_module_info());
     // S_Data_Node const data_node(session_->get_data(MODEL_ALL.c_str()));
     // S_Data_Node const data_node(session_->get_data(MODEL_AND_ROOT_NODE.c_str()));
-    S_Data_Node const data_node(session_->get_data(xpath_c_str));
+    // S_Data_Node const data_node(session_->get_data(xpath_c_str));
+    // S_Data_Node const data_node(session_->get_data(xpath_c_str));
 
-    S_Set const set(data_node->find_path(xpath_c_str));
+    return data_node->find_path(xpath_c_str);
+  }
+
+  bool isKey(std::string const &xpath) {
+    S_Set const set(getSet(xpath));
     std::cerr << "  isKey(" << xpath << "): " << set->number() << std::endl;
     for (S_Schema_Node const &schema_node : set->schema()) {
       if (schema_node->nodetype() != LYS_LEAF) {
@@ -160,14 +169,7 @@ private:
   }
 
   std::vector<std::string> keys(std::string const &xpath) {
-    char const *const &xpath_c_str(xpath.c_str());
-
-    // S_Data_Node const data_node(connection_->get_module_info());
-    // S_Data_Node const data_node(session_->get_data(MODEL_ALL.c_str()));
-    // S_Data_Node const data_node(session_->get_data(MODEL_AND_ROOT_NODE.c_str()));
-    S_Data_Node const data_node(session_->get_data(xpath_c_str));
-
-    S_Set const set(data_node->find_path(xpath_c_str));
+    S_Set const set(getSet(xpath));
     std::cerr << "    keys(" << xpath << "): " << set->number() << std::endl;
     std::vector<std::string> result;
     for (S_Schema_Node const &schema_node : set->schema()) {
